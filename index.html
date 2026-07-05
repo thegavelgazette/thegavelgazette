@@ -783,6 +783,10 @@ searchInput.addEventListener('keydown', (e) => {
     searchInput.classList.remove('open');
     renderArticles();
   }
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('articles').scrollIntoView({behavior:'smooth', block:'start'});
+  }
 });
 
 document.getElementById('filterbar').addEventListener('click', (e) => {
