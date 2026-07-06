@@ -1,0 +1,34 @@
+[
+  {
+    "id": "seed-1", "docket": "No. 26-0001", "category": "Case Commentary",
+    "title": "Reasonable Doubt, Unreasonable Delay",
+    "author": "Editorial Team", "date": "2026-01-12",
+    "excerpt": "A look at how courts weigh the right to a speedy trial against the practical realities of an overloaded docket.",
+    "content": "Placeholder content. Replace with your own case commentary once the publishing workflow is wired up.",
+    "pinned": false
+  },
+  {
+    "id": "seed-2", "docket": "No. 26-0002", "category": "Opinion",
+    "title": "Why Precedent Isn't Destiny",
+    "author": "Editorial Team", "date": "2026-01-19",
+    "excerpt": "Precedent guides courts, but it does not bind the future as tightly as we assume — an argument for judicial humility.",
+    "content": "Placeholder content. Swap this out with a real opinion piece later.",
+    "pinned": false
+  },
+  {
+    "id": "seed-3", "docket": "No. 26-0003", "category": "Article",
+    "title": "Reading a Judgment Like a Lawyer",
+    "author": "Editorial Team", "date": "2026-01-26",
+    "excerpt": "A short, practical guide to the structure of a judgment — facts, issues, reasoning, and holding — for the curious non-lawyer.",
+    "content": "Placeholder content demonstrating the Article category.",
+    "pinned": false
+  },
+  {
+    "id": "seed-4", "docket": "No. 26-0004", "category": "Case Commentary",
+    "title": "The Silence Between the Lines",
+    "author": "Editorial Team", "date": "2026-02-02",
+    "excerpt": "What courts choose not to say in a judgment is sometimes as instructive as what they do.",
+    "content": "Placeholder content for a second Case Commentary example.",
+    "pinned": false
+  }
+]

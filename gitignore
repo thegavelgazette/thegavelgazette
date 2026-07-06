@@ -1,0 +1,13 @@
+# Never commit secrets
+.env
+telegram-bot/.env
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# OS/editor junk
+.DS_Store
+Thumbs.db
