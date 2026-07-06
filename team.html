@@ -249,7 +249,7 @@ function renderTeam(){
       </div>
     `).join('');
     return `
-      <section class="dept-section">
+      <section class="dept-section" id="dept-${deptClass.replace('dept-','')}">
         <div class="dept-head">
           <h3>${dept}</h3>
           <span class="dept-count">${members.length} member${members.length !== 1 ? 's' : ''}</span>
@@ -258,6 +258,23 @@ function renderTeam(){
       </section>
     `;
   }).join('');
+
+  // If arriving from a homepage department link (team.html?dept=Marketing),
+  // scroll straight to that section and briefly highlight it.
+  const params = new URLSearchParams(window.location.search);
+  const targetDept = params.get('dept');
+  if(targetDept){
+    const el = document.getElementById('dept-' + targetDept.toLowerCase());
+    if(el){
+      setTimeout(() => {
+        el.scrollIntoView({behavior:'smooth', block:'start'});
+        el.style.transition = 'box-shadow .4s ease';
+        el.style.boxShadow = '0 0 0 2px var(--gold)';
+        el.style.borderRadius = '10px';
+        setTimeout(() => { el.style.boxShadow = 'none'; }, 1800);
+      }, 150);
+    }
+  }
 }
 
 renderTeam();
