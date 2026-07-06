@@ -541,6 +541,7 @@
     <button class="tab" data-filter="Global Perspective">Global Perspective</button>
   </div>
   <div class="grid" id="grid"></div>
+  <div id="loadMoreWrap" style="text-align:center; margin:-40px 0 56px;"></div>
 </main>
 
 <div class="wrap">
@@ -677,39 +678,14 @@
 document.getElementById('year').textContent = new Date().getFullYear();
 
 // Static placeholder content — no backend/storage wired up yet, per request
-const articles = [
-  {
-    id: 'seed-1', docket: 'No. 26-0001', category: 'Case Commentary',
-    title: 'Reasonable Doubt, Unreasonable Delay',
-    author: 'Editorial Team', date: '2026-01-12',
-    excerpt: 'A look at how courts weigh the right to a speedy trial against the practical realities of an overloaded docket.',
-    content: 'Placeholder content. Replace with your own case commentary once the publishing workflow is wired up.'
-  },
-  {
-    id: 'seed-2', docket: 'No. 26-0002', category: 'Opinion',
-    title: "Why Precedent Isn't Destiny",
-    author: 'Editorial Team', date: '2026-01-19',
-    excerpt: 'Precedent guides courts, but it does not bind the future as tightly as we assume — an argument for judicial humility.',
-    content: 'Placeholder content. Swap this out with a real opinion piece later.'
-  },
-  {
-    id: 'seed-3', docket: 'No. 26-0003', category: 'Article',
-    title: 'Reading a Judgment Like a Lawyer',
-    author: 'Editorial Team', date: '2026-01-26',
-    excerpt: 'A short, practical guide to the structure of a judgment — facts, issues, reasoning, and holding — for the curious non-lawyer.',
-    content: 'Placeholder content demonstrating the Article category.'
-  },
-  {
-    id: 'seed-4', docket: 'No. 26-0004', category: 'Case Commentary',
-    title: 'The Silence Between the Lines',
-    author: 'Editorial Team', date: '2026-02-02',
-    excerpt: 'What courts choose not to say in a judgment is sometimes as instructive as what they do.',
-    content: 'Placeholder content for a second Case Commentary example.'
-  }
-];
+// Articles are loaded from articles.json so the Telegram publishing bot
+// (or anyone editing content) never has to touch this HTML file.
+let articles = [];
 
 let currentFilter = 'All';
 let searchTerm = '';
+let visibleCount = 9;
+const PAGE_SIZE = 9;
 
 function escapeHtml(str){
   const d = document.createElement('div');
@@ -740,9 +716,12 @@ function renderArticles(){
   if(filtered.length === 0){
     const msg = searchTerm ? `No articles match “${escapeHtml(searchTerm)}”.` : 'Nothing published in this category yet.';
     grid.innerHTML = `<div style="grid-column:1/-1;padding:50px;text-align:center;color:var(--cream-soft);font-family:'IBM Plex Mono',monospace;font-size:13px;">${msg}</div>`;
+    document.getElementById('loadMoreWrap').innerHTML = '';
     return;
   }
-  grid.innerHTML = filtered.map(a => `
+
+  const visible = filtered.slice(0, visibleCount);
+  grid.innerHTML = visible.map(a => `
     <article class="card" data-id="${a.id}">
       <div class="docket mono">${a.docket}${a.pinned ? ' · <span style="color:var(--gold)">PINNED</span>' : ''}</div>
       <span class="cat">${a.category}</span>
@@ -757,6 +736,18 @@ function renderArticles(){
   grid.querySelectorAll('.card').forEach(card => {
     card.addEventListener('click', () => openReader(card.dataset.id));
   });
+
+  const loadMoreWrap = document.getElementById('loadMoreWrap');
+  if(filtered.length > visibleCount){
+    const remaining = filtered.length - visibleCount;
+    loadMoreWrap.innerHTML = `<button class="btn-outline" id="loadMoreBtn" style="cursor:pointer;">Show ${Math.min(remaining, PAGE_SIZE)} more ↓</button>`;
+    document.getElementById('loadMoreBtn').addEventListener('click', () => {
+      visibleCount += PAGE_SIZE;
+      renderArticles();
+    });
+  }else{
+    loadMoreWrap.innerHTML = '';
+  }
 }
 
 // Search toggle — opens a small input and filters the article grid live
@@ -769,17 +760,20 @@ searchToggle.addEventListener('click', () => {
   }else{
     searchInput.value = '';
     searchTerm = '';
+    visibleCount = PAGE_SIZE;
     renderArticles();
   }
 });
 searchInput.addEventListener('input', (e) => {
   searchTerm = e.target.value.trim().toLowerCase();
+  visibleCount = PAGE_SIZE;
   renderArticles();
 });
 searchInput.addEventListener('keydown', (e) => {
   if(e.key === 'Escape'){
     searchInput.value = '';
     searchTerm = '';
+    visibleCount = PAGE_SIZE;
     searchInput.classList.remove('open');
     renderArticles();
   }
@@ -795,6 +789,7 @@ document.getElementById('filterbar').addEventListener('click', (e) => {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   currentFilter = btn.dataset.filter;
+  visibleCount = PAGE_SIZE;
   renderArticles();
 });
 
@@ -805,6 +800,7 @@ document.querySelectorAll('#navLinks a[data-filter]').forEach(a => {
     a.classList.add('active');
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.filter === f));
     currentFilter = f;
+    visibleCount = PAGE_SIZE;
     renderArticles();
     document.getElementById('navLinks').classList.remove('open');
   });
@@ -867,7 +863,25 @@ document.getElementById('topSubscribe').addEventListener('click', () => {
   document.querySelector('.newsletter').scrollIntoView({behavior:'smooth'});
 });
 
-renderArticles();
+// Load articles from articles.json (bot/manual edits both just change this file)
+async function loadArticles(){
+  try{
+    const res = await fetch('articles.json', {cache:'no-store'});
+    if(!res.ok){
+      throw new Error(`articles.json returned HTTP ${res.status} — check that the file is deployed alongside index.html`);
+    }
+    articles = await res.json();
+  }catch(e){
+    console.error('Could not load articles.json:', e.message);
+    articles = [];
+    document.getElementById('grid').innerHTML =
+      '<div style="grid-column:1/-1;padding:50px;text-align:center;color:var(--cream-soft);font-family:\'IBM Plex Mono\',monospace;font-size:13px;">' +
+      'Could not load articles right now. If you\'re the site owner: make sure articles.json is uploaded in the same folder as index.html.</div>';
+    return;
+  }
+  renderArticles();
+}
+loadArticles();
 </script>
 </body>
 </html>
