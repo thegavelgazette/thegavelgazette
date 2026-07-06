@@ -411,7 +411,9 @@
   .team-card{
     background:#FBF7EC; border:1px solid #DED2AE; border-radius:12px;
     padding:22px 20px; display:flex; flex-direction:column; gap:10px;
+    cursor:pointer; transition:transform .15s, box-shadow .15s;
   }
+  .team-card:hover{transform:translateY(-3px); box-shadow:0 8px 18px rgba(0,0,0,0.15);}
   .team-card .icon svg{width:20px; height:20px; stroke:#8C6D26;}
   .team-card h4{font-family:'Cormorant Garamond', serif; font-weight:700; font-size:17px; margin:2px 0 0; color:#221E17;}
   .team-card p{font-size:13px; line-height:1.6; margin:0;}
@@ -568,31 +570,31 @@
       <span class="eyebrow-right">Five teams, one publication standard.</span>
     </div>
     <div class="team-grid">
-      <div class="team-card">
+      <a class="team-card" href="team.html?dept=Writing">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
         <h4>Writing</h4>
         <p class="d-writing">Turns legal developments into accessible explainers, opinions, interviews, and issue features.</p>
-      </div>
-      <div class="team-card">
+      </a>
+      <a class="team-card" href="team.html?dept=Research">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg></div>
         <h4>Research</h4>
         <p class="d-research">Tracks sources, cases, statutes, policy updates, and background material for every story.</p>
-      </div>
-      <div class="team-card">
+      </a>
+      <a class="team-card" href="team.html?dept=Editing">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></div>
         <h4>Editing</h4>
         <p class="d-editing">Shapes clarity, structure, tone, and accuracy before any piece reaches publication.</p>
-      </div>
-      <div class="team-card">
+      </a>
+      <a class="team-card" href="team.html?dept=Design">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.5" cy="6.5" r="0.6" fill="currentColor"/><path d="M12 2a10 10 0 1 0 10 10c0-1.1-.9-2-2-2h-3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h1a2 2 0 0 0 0-4 9.9 9.9 0 0 0-6-2z"/></svg></div>
         <h4>Design</h4>
         <p class="d-design">Creates the visual system, layouts, covers, social assets, and reading experience.</p>
-      </div>
-      <div class="team-card">
+      </a>
+      <a class="team-card" href="team.html?dept=Marketing">
         <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-3-8-8-3z"/></svg></div>
         <h4>Marketing</h4>
         <p class="d-marketing">Builds audience strategy, campaign ideas, launch plans, and reader engagement around every issue.</p>
-      </div>
+      </a>
     </div>
   </div>
 </div>
@@ -723,13 +725,12 @@ function renderArticles(){
   const visible = filtered.slice(0, visibleCount);
   grid.innerHTML = visible.map(a => `
     <article class="card" data-id="${a.id}">
-      <div class="docket mono">${a.docket}${a.pinned ? ' · <span style="color:var(--gold)">PINNED</span>' : ''}</div>
+      <div class="docket mono">${formatDate(a.date).toUpperCase()}${a.pinned ? ' · <span style="color:var(--gold)">PINNED</span>' : ''}</div>
       <span class="cat">${a.category}</span>
       <h3>${escapeHtml(a.title)}</h3>
       <p class="excerpt">${escapeHtml(a.excerpt)}</p>
       <div class="byline mono">
         <span>${escapeHtml(a.author)}</span>
-        <span>${formatDate(a.date)}</span>
       </div>
     </article>
   `).join('');
@@ -814,10 +815,10 @@ const readOverlay = document.getElementById('readOverlay');
 function openReader(id){
   const a = articles.find(x => x.id === id);
   if(!a) return;
-  document.getElementById('readDocket').textContent = a.docket;
+  document.getElementById('readDocket').textContent = formatDate(a.date).toUpperCase();
   document.getElementById('readCat').textContent = a.category;
   document.getElementById('readTitle').textContent = a.title;
-  document.getElementById('readByline').textContent = `${a.author} · ${formatDate(a.date)}`;
+  document.getElementById('readByline').textContent = a.author;
   document.getElementById('readBody').textContent = a.content;
   readOverlay.classList.add('open');
 }
