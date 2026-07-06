@@ -259,8 +259,7 @@ function renderTeam(){
     `;
   }).join('');
 
-  // If arriving from a homepage department link (team.html?dept=Marketing),
-  // scroll straight to that section and briefly highlight it.
+  // scroll straight to that section (no highlight box)
   const params = new URLSearchParams(window.location.search);
   const targetDept = params.get('dept');
   if(targetDept){
@@ -268,10 +267,6 @@ function renderTeam(){
     if(el){
       setTimeout(() => {
         el.scrollIntoView({behavior:'smooth', block:'start'});
-        el.style.transition = 'box-shadow .4s ease';
-        el.style.boxShadow = '0 0 0 2px var(--gold)';
-        el.style.borderRadius = '10px';
-        setTimeout(() => { el.style.boxShadow = 'none'; }, 1800);
       }, 150);
     }
   }
