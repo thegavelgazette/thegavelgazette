@@ -1,5 +1,15 @@
 [
   {
+    "id": "a-1783494115",
+    "category": "Article",
+    "title": "Trying out the bot",
+    "author": "Atharva",
+    "date": "2026-07-08",
+    "excerpt": "This has been published through telegram bot",
+    "content": "Humpty Dumpty sat on a wall.\nHumpty Dumpty had a great fall.\nAll the king's horses and all the king's men\nCouldn't put Humpty together again.",
+    "pinned": true
+  },
+  {
     "id": "seed-1",
     "category": "Case Commentary",
     "title": "Reasonable Doubt, Unreasonable Delay",
@@ -15,7 +25,7 @@
     "title": "Why Precedent Isn't Destiny",
     "author": "Editorial Team",
     "date": "2026-01-19",
-    "excerpt": "Precedent guides courts, but it does not bind the future as tightly as we assume \u2014 an argument for judicial humility.",
+    "excerpt": "Precedent guides courts, but it does not bind the future as tightly as we assume — an argument for judicial humility.",
     "content": "Placeholder content. Swap this out with a real opinion piece later.",
     "pinned": false
   },
@@ -25,7 +35,7 @@
     "title": "Reading a Judgment Like a Lawyer",
     "author": "Editorial Team",
     "date": "2026-01-26",
-    "excerpt": "A short, practical guide to the structure of a judgment \u2014 facts, issues, reasoning, and holding \u2014 for the curious non-lawyer.",
+    "excerpt": "A short, practical guide to the structure of a judgment — facts, issues, reasoning, and holding — for the curious non-lawyer.",
     "content": "Placeholder content demonstrating the Article category.",
     "pinned": false
   },
