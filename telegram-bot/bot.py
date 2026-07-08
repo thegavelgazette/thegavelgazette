@@ -60,6 +60,7 @@ CATEGORIES = ["Case Commentary", "Opinion", "Article", "Legal News", "Global Per
 
 # Conversation states
 CATEGORY, TITLE, AUTHOR, EXCERPT, CONTENT, PIN, CONFIRM = range(7)
+EDIT_FIELD, EDIT_VALUE = range(7, 9)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -103,12 +104,6 @@ def github_put_file(new_articles, sha, commit_message):
     res = requests.put(url, headers=headers, json=payload)
     res.raise_for_status()
     return res.json()
-
-
-def next_docket(articles):
-    year = date.today().strftime("%y")
-    seq = str(len(articles) + 1).zfill(4)
-    return f"No. {year}-{seq}"
 
 
 # ---------------------------------------------------------------------------
@@ -180,6 +175,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Welcome to The Gavel Gazette publishing bot.\n\n"
             "Send /newpost to write and publish a new article.\n"
             "Send /pin to pin or unpin an already-published article.\n"
+            "Send /edit to edit an already-published article.\n"
+            "Send /delete to remove an already-published article.\n"
             "Send /cancel any time to abort a post you're writing."
         )
     else:
@@ -187,6 +184,261 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Hi! This bot publishes articles for The Gavel Gazette, "
             "but your Telegram account isn't approved yet. Ask an admin to add your user ID."
         )
+
+
+# ---------------------------------------------------------------------------
+# /delete — list recent articles, confirm, remove
+# ---------------------------------------------------------------------------
+
+async def delete_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not is_allowed(user.id):
+        await update.message.reply_text("Sorry, this Telegram account isn't approved to manage posts.")
+        return
+    try:
+        articles, _ = github_get_file()
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't load articles: {e}")
+        return
+    if not articles:
+        await update.message.reply_text("There are no articles yet.")
+        return
+
+    recent = sorted(articles, key=lambda a: a.get("date", ""), reverse=True)[:12]
+    keyboard = [[InlineKeyboardButton(a["title"][:45], callback_data=f"delask:{a['id']}")] for a in recent]
+    await update.message.reply_text(
+        "Tap an article to delete it (you'll be asked to confirm):",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def delete_ask(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    article_id = query.data.split(":", 1)[1]
+    try:
+        articles, _ = github_get_file()
+        target = next((a for a in articles if a["id"] == article_id), None)
+        if target is None:
+            await query.edit_message_text("That article couldn't be found anymore.")
+            return
+        keyboard = [[
+            InlineKeyboardButton("✅ Yes, delete it", callback_data=f"delyes:{article_id}"),
+            InlineKeyboardButton("❌ No, keep it", callback_data="delno"),
+        ]]
+        await query.edit_message_text(
+            f"Delete this permanently?\n\n\"{target['title']}\"",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+    except Exception as e:
+        await query.edit_message_text(f"❌ Something went wrong: {e}")
+
+
+async def delete_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    user = update.effective_user
+    if not is_allowed(user.id):
+        await query.answer("Not approved to do this.", show_alert=True)
+        return
+    await query.answer()
+
+    if query.data == "delno":
+        await query.edit_message_text("Cancelled — nothing was deleted.")
+        return
+
+    article_id = query.data.split(":", 1)[1]
+    try:
+        articles, sha = github_get_file()
+        target = next((a for a in articles if a["id"] == article_id), None)
+        if target is None:
+            await query.edit_message_text("That article couldn't be found anymore (maybe already deleted).")
+            return
+        remaining = [a for a in articles if a["id"] != article_id]
+        github_put_file(remaining, sha, f"Delete article via Telegram: {target['title']}")
+        await query.edit_message_text(f"🗑️ Deleted: {target['title']}")
+    except Exception as e:
+        log.exception("Delete failed")
+        await query.edit_message_text(f"❌ Something went wrong: {e}")
+
+
+# ---------------------------------------------------------------------------
+# /edit — pick an article, pick a field, send a new value, repeat, then save
+# ---------------------------------------------------------------------------
+
+EDIT_FIELDS = [
+    ("title", "Title"),
+    ("author", "Author"),
+    ("excerpt", "Excerpt"),
+    ("content", "Full text"),
+    ("category", "Category"),
+    ("pinned", "Toggle pinned"),
+]
+
+
+async def edit_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if not is_allowed(user.id):
+        await update.message.reply_text("Sorry, this Telegram account isn't approved to manage posts.")
+        return ConversationHandler.END
+    try:
+        articles, _ = github_get_file()
+    except Exception as e:
+        await update.message.reply_text(f"Couldn't load articles: {e}")
+        return ConversationHandler.END
+    if not articles:
+        await update.message.reply_text("There are no articles yet.")
+        return ConversationHandler.END
+
+    recent = sorted(articles, key=lambda a: a.get("date", ""), reverse=True)[:12]
+    keyboard = [[InlineKeyboardButton(a["title"][:45], callback_data=f"editpick:{a['id']}")] for a in recent]
+    await update.message.reply_text(
+        "Which article do you want to edit?",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return EDIT_FIELD
+
+
+def _edit_field_menu_text(d):
+    a = d["working"]
+    return (
+        f"Editing: *{a['title']}*\n\n"
+        f"Category: {a['category']}\n"
+        f"Author: {a['author']}\n"
+        f"Pinned: {'Yes' if a.get('pinned') else 'No'}\n"
+        f"Excerpt: {a['excerpt'][:80]}{'...' if len(a['excerpt']) > 80 else ''}\n\n"
+        f"What do you want to change?"
+    )
+
+
+async def edit_pick(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    article_id = query.data.split(":", 1)[1]
+    try:
+        articles, sha = github_get_file()
+    except Exception as e:
+        await query.edit_message_text(f"Couldn't load articles: {e}")
+        return ConversationHandler.END
+
+    target = next((a for a in articles if a["id"] == article_id), None)
+    if target is None:
+        await query.edit_message_text("That article couldn't be found anymore.")
+        return ConversationHandler.END
+
+    context.user_data["edit"] = {"id": article_id, "sha": sha, "working": dict(target)}
+
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"editfield:{key}")] for key, label in EDIT_FIELDS]
+    keyboard.append([InlineKeyboardButton("💾 Save changes", callback_data="editfield:save")])
+    keyboard.append([InlineKeyboardButton("Cancel", callback_data="editfield:cancel")])
+    await query.edit_message_text(
+        _edit_field_menu_text(context.user_data["edit"]),
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return EDIT_FIELD
+
+
+async def edit_field_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    field = query.data.split(":", 1)[1]
+    d = context.user_data.get("edit")
+    if d is None:
+        await query.edit_message_text("Session expired — start again with /edit.")
+        return ConversationHandler.END
+
+    if field == "cancel":
+        context.user_data.pop("edit", None)
+        await query.edit_message_text("Cancelled — no changes were saved.")
+        return ConversationHandler.END
+
+    if field == "save":
+        try:
+            articles, fresh_sha = github_get_file()
+            idx = next((i for i, a in enumerate(articles) if a["id"] == d["id"]), None)
+            if idx is None:
+                await query.edit_message_text("That article couldn't be found anymore (maybe deleted).")
+                return ConversationHandler.END
+            articles[idx] = d["working"]
+            github_put_file(articles, fresh_sha, f"Edit article via Telegram: {d['working']['title']}")
+            await query.edit_message_text(f"✅ Saved changes to \"{d['working']['title']}\"")
+        except Exception as e:
+            log.exception("Edit save failed")
+            await query.edit_message_text(f"❌ Something went wrong saving: {e}")
+        context.user_data.pop("edit", None)
+        return ConversationHandler.END
+
+    if field == "pinned":
+        d["working"]["pinned"] = not d["working"].get("pinned", False)
+        keyboard = [[InlineKeyboardButton(label, callback_data=f"editfield:{key}")] for key, label in EDIT_FIELDS]
+        keyboard.append([InlineKeyboardButton("💾 Save changes", callback_data="editfield:save")])
+        keyboard.append([InlineKeyboardButton("Cancel", callback_data="editfield:cancel")])
+        await query.edit_message_text(
+            _edit_field_menu_text(d), parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return EDIT_FIELD
+
+    if field == "category":
+        keyboard = [[InlineKeyboardButton(c, callback_data=f"editcat:{c}")] for c in CATEGORIES]
+        keyboard.append([InlineKeyboardButton("« Back", callback_data="editfield:back")])
+        await query.edit_message_text("Pick a new category:", reply_markup=InlineKeyboardMarkup(keyboard))
+        return EDIT_FIELD
+
+    if field == "back":
+        keyboard = [[InlineKeyboardButton(label, callback_data=f"editfield:{key}")] for key, label in EDIT_FIELDS]
+        keyboard.append([InlineKeyboardButton("💾 Save changes", callback_data="editfield:save")])
+        keyboard.append([InlineKeyboardButton("Cancel", callback_data="editfield:cancel")])
+        await query.edit_message_text(
+            _edit_field_menu_text(d), parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return EDIT_FIELD
+
+    # title / author / excerpt / content -> ask for a text reply
+    d["pending_field"] = field
+    await query.edit_message_text(f"Send the new {field} as a message:")
+    return EDIT_VALUE
+
+
+async def edit_category_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    d = context.user_data.get("edit")
+    if d is None:
+        await query.edit_message_text("Session expired — start again with /edit.")
+        return ConversationHandler.END
+    new_category = query.data.split(":", 1)[1]
+    d["working"]["category"] = new_category
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"editfield:{key}")] for key, label in EDIT_FIELDS]
+    keyboard.append([InlineKeyboardButton("💾 Save changes", callback_data="editfield:save")])
+    keyboard.append([InlineKeyboardButton("Cancel", callback_data="editfield:cancel")])
+    await query.edit_message_text(
+        _edit_field_menu_text(d), parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return EDIT_FIELD
+
+
+async def edit_value_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    d = context.user_data.get("edit")
+    if d is None:
+        await update.message.reply_text("Session expired — start again with /edit.")
+        return ConversationHandler.END
+    field = d.pop("pending_field", None)
+    if field:
+        d["working"][field] = update.message.text.strip()
+
+    keyboard = [[InlineKeyboardButton(label, callback_data=f"editfield:{key}")] for key, label in EDIT_FIELDS]
+    keyboard.append([InlineKeyboardButton("💾 Save changes", callback_data="editfield:save")])
+    keyboard.append([InlineKeyboardButton("Cancel", callback_data="editfield:cancel")])
+    await update.message.reply_text(
+        _edit_field_menu_text(d), parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return EDIT_FIELD
+
+
+async def edit_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.pop("edit", None)
+    await update.message.reply_text("Cancelled — no changes were saved.")
+    return ConversationHandler.END
 
 
 async def newpost_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -290,7 +542,6 @@ async def confirm_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         d = context.user_data
         new_article = {
             "id": f"a-{int(__import__('time').time())}",
-            "docket": next_docket(articles),
             "category": d["category"],
             "title": d["title"],
             "author": d["author"],
@@ -345,9 +596,26 @@ def main():
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
+    edit_conv = ConversationHandler(
+        entry_points=[CommandHandler("edit", edit_start)],
+        states={
+            EDIT_FIELD: [
+                CallbackQueryHandler(edit_pick, pattern="^editpick:"),
+                CallbackQueryHandler(edit_category_chosen, pattern="^editcat:"),
+                CallbackQueryHandler(edit_field_chosen, pattern="^editfield:"),
+            ],
+            EDIT_VALUE: [MessageHandler(filters.TEXT & ~filters.COMMAND, edit_value_received)],
+        },
+        fallbacks=[CommandHandler("cancel", edit_cancel)],
+    )
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("pin", pin_list))
     app.add_handler(CallbackQueryHandler(togglepin_callback, pattern="^togglepin:"))
+    app.add_handler(CommandHandler("delete", delete_list))
+    app.add_handler(CallbackQueryHandler(delete_ask, pattern="^delask:"))
+    app.add_handler(CallbackQueryHandler(delete_confirm, pattern="^(delyes:|delno$)"))
+    app.add_handler(edit_conv)
     app.add_handler(conv)
 
     log.info("Bot starting (polling)...")
