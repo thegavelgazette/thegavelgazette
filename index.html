@@ -308,6 +308,10 @@
   footer .mono{color:var(--cream-soft); font-size:11.5px;}
 
   .social-row{display:flex; gap:10px;}
+  .follow-label{
+    font-family:'Cinzel', serif; font-weight:500; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--gold); margin-bottom:10px;
+  }
   .social-btn{
     width:38px; height:38px; border:1px solid var(--rule); border-radius:100px;
     display:flex; align-items:center; justify-content:center;
@@ -386,6 +390,15 @@
   .note-card p{font-size:15px; line-height:1.75; color:#C9C2AD; margin:0 0 16px;}
   .note-card .byline{
     font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:#C9A24E;
+  }
+  .note-card .sign-block{line-height:1.9;}
+  .note-card .sign-block .sign-name{
+    font-family:'Cormorant Garamond', serif; font-weight:700; font-style:italic; font-size:16px;
+    color:#F2ECDA; letter-spacing:normal; text-transform:none; display:block;
+  }
+  .note-card .sign-block .sign-role, .note-card .sign-block .sign-year{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+    color:#C9A24E; display:block;
   }
   @media(max-width:760px){ .note-card{border-left:none; border-top:1px solid #24382A;} }
 
@@ -492,7 +505,7 @@
   <div class="wrap">
     <span class="tag">Latest</span>
     <span class="msg">Where the Gavel Falls, We Begin — a student-led legal publication built on clarity, curiosity, and public-minded analysis.</span>
-    <a href="team.html" class="team-link">Our team →</a>
+    <a href="#editorial-room" class="team-link">Our team →</a>
   </div>
 </div>
 
@@ -551,7 +564,7 @@
         <p>The idea behind this publication was to create a space where students could share their thoughts, express their perspectives, and contribute to meaningful legal discussions with confidence.</p>
         <p>The Gavel Gazette runs on the belief that curiosity is worth encouraging and that different perspectives make the work better, not messier. I hope it becomes more than a publication. I hope it becomes a community, one where students feel confident enough to contribute, brave enough to push back on ideas, and free enough to find their own voice in the process.</p>
         <p>Where the Gavel Falls, We Begin.</p>
-        <div class="byline">— Anavi, Founder, The Gavel Gazette</div>
+        <div class="byline sign-block"><span class="sign-name">Anavi</span><span class="sign-role">Founder</span><span class="sign-year">BBA LLB (2nd Year)</span></div>
       </div>
     </div>
 
@@ -563,13 +576,13 @@
       <div class="note-card">
         <p>As a student-led publication, we share thoughtful articles, case commentaries, legal updates, opportunities, and diverse perspectives to encourage informed discussion and a deeper appreciation of law's role in everyday life. More than a publication, The Gavel Gazette is a community committed to integrity, and meaningful and continuous learning.</p>
         <p>Thank you for being part of this journey.</p>
-        <div class="byline">— Mahi Yadav, Founder</div>
+        <div class="byline sign-block"><span class="sign-name">Mahi Yadav</span><span class="sign-role">Founder</span><span class="sign-year">BBA LLB (2nd Year)</span></div>
       </div>
     </div>
 
     <div class="sheet-divider"></div>
 
-    <div class="founders-head">
+    <div class="founders-head" id="editorial-room">
       <h2>Inside the Editorial Room</h2>
       <span class="eyebrow-right">Five teams, one publication standard.</span>
     </div>
@@ -644,7 +657,9 @@
         <div class="brand">The Gavel Gazette</div>
         <p>News. Justice. Perspective. Written and edited by its student contributors.</p>
       </div>
-      <div class="social-row">
+      <div>
+        <div class="follow-label">Follow us</div>
+        <div class="social-row">
         <!-- Replace the href="#" values below with your real profile links -->
         <a href="https://www.instagram.com/thegavelgazette/" class="social-btn" aria-label="Instagram" title="Instagram" target="_blank" rel="noopener">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="0.6" fill="currentColor" stroke="none"/></svg>
@@ -658,6 +673,7 @@
         <a href="mailto:thegavelgazette@gmail.com" class="social-btn" aria-label="Email" title="Email">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg>
         </a>
+        </div>
       </div>
     </div>
 
