@@ -65,30 +65,27 @@
   }
   .utility button.subscribe:hover{color:var(--gold);}
 
-  .search-wrap{position:relative; display:flex; align-items:center;}
+  .search-wrap{
+    position:relative; display:flex; align-items:center;
+    background:var(--bg-panel); border:1px solid var(--rule); border-radius:100px;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .search-wrap:focus-within{border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,78,0.12);}
+  .search-icon{
+    width:14px; height:14px; stroke:var(--cream-soft); fill:none; stroke-width:2;
+    position:absolute; left:13px; pointer-events:none;
+  }
+  .search-wrap:focus-within .search-icon{stroke:var(--gold);}
   .search-input{
-    width:0; opacity:0; padding:0; border:none; background:transparent;
-    color:var(--cream); font-family:'IBM Plex Mono', monospace; font-size:11.5px;
-    letter-spacing:.05em; text-transform:none; border-bottom:1px solid transparent;
-    transition:width .2s ease, opacity .2s ease, padding .2s ease, border-color .2s ease;
-    position:absolute; right:26px; top:50%; transform:translateY(-50%);
+    width:168px; background:transparent; border:none; outline:none;
+    color:var(--cream); font-family:'Inter', sans-serif; font-size:12.5px;
+    letter-spacing:.02em; padding:8px 14px 8px 34px;
   }
-  .search-input.open{
-    width:160px; opacity:1; padding:4px 2px; border-bottom:1px solid var(--rule);
-  }
-  .search-input::placeholder{color:var(--cream-soft); text-transform:none;}
+  .search-input::placeholder{color:var(--cream-soft); opacity:0.85;}
   @media(max-width:600px){
-    .utility{position:relative;}
-    .utility .wrap{flex-wrap:wrap; row-gap:8px;}
-    .search-wrap{position:static;}
-    .search-input{
-      position:absolute; top:100%; right:24px; left:24px;
-      transform:none; width:auto !important; box-sizing:border-box;
-    }
-    .search-input.open{
-      padding:8px 10px; background:var(--bg-panel); border:1px solid var(--rule);
-      border-radius:8px; box-shadow:0 8px 18px rgba(0,0,0,0.25); z-index:70;
-    }
+    .utility .wrap{flex-wrap:wrap; row-gap:10px;}
+    .search-wrap{width:100%; order:3;}
+    .search-input{width:100%; box-sizing:border-box;}
   }
 
   /* ---------- Masthead ---------- */
@@ -473,7 +470,7 @@
     <span id="editionTag">GLOBAL EDITION</span>
     <div class="right">
       <div class="search-wrap">
-        <button class="subscribe" id="searchToggle" aria-label="Search articles">⌕</button>
+        <svg class="search-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
         <input type="text" id="searchInput" class="search-input" placeholder="Search articles…">
       </div>
       <button class="subscribe" id="topSubscribe">Subscribe</button>
@@ -771,20 +768,8 @@ function renderArticles(){
   }
 }
 
-// Search toggle — opens a small input and filters the article grid live
-const searchToggle = document.getElementById('searchToggle');
+// Search — always-visible bar, filters the article grid live as you type
 const searchInput = document.getElementById('searchInput');
-searchToggle.addEventListener('click', () => {
-  const isOpen = searchInput.classList.toggle('open');
-  if(isOpen){
-    searchInput.focus();
-  }else{
-    searchInput.value = '';
-    searchTerm = '';
-    visibleCount = PAGE_SIZE;
-    renderArticles();
-  }
-});
 searchInput.addEventListener('input', (e) => {
   searchTerm = e.target.value.trim().toLowerCase();
   visibleCount = PAGE_SIZE;
@@ -795,7 +780,7 @@ searchInput.addEventListener('keydown', (e) => {
     searchInput.value = '';
     searchTerm = '';
     visibleCount = PAGE_SIZE;
-    searchInput.classList.remove('open');
+    searchInput.blur();
     renderArticles();
   }
   if(e.key === 'Enter'){
