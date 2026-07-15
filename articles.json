@@ -1,15 +1,5 @@
 [
   {
-    "id": "a-1783494115",
-    "category": "Article",
-    "title": "Trying out the bot",
-    "author": "Atharva",
-    "date": "2026-07-08",
-    "excerpt": "This has been published through telegram bot",
-    "content": "Humpty Dumpty sat on a wall.\nHumpty Dumpty had a great fall.\nAll the king's horses and all the king's men\nCouldn't put Humpty together again.",
-    "pinned": true
-  },
-  {
     "id": "seed-2",
     "category": "Opinion",
     "title": "Why Precedent Isn't Destiny",
