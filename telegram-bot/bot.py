@@ -483,23 +483,66 @@ async def author_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def excerpt_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["excerpt"] = update.message.text.strip()
+    context.user_data["content_parts"] = []
     await update.message.reply_text(
-        "Now paste the full text of the piece. You can send it as one long message."
+        "Now send the full text of the piece.\n\n"
+        "Telegram limits each message to about 4000 characters, so for longer "
+        "pieces just send it in a few messages one after another — I'll stitch "
+        "them together. Send /done when you've sent it all.\n\n"
+        "Alternatively, you can upload it as a .txt file in one go instead."
     )
     return CONTENT
 
 
 async def content_received(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["content"] = update.message.text.strip()
-    keyboard = [[
-        InlineKeyboardButton("Yes, pin it", callback_data="pin_yes"),
-        InlineKeyboardButton("No", callback_data="pin_no"),
-    ]]
+    # Accept a .txt file upload as a shortcut for long pieces
+    if update.message.document:
+        doc = update.message.document
+        if not doc.file_name.lower().endswith(".txt"):
+            await update.message.reply_text(
+                "I can only read plain .txt files. Please send the text as a message instead, "
+                "or upload a .txt file."
+            )
+            return CONTENT
+        file = await doc.get_file()
+        raw = await file.download_as_bytearray()
+        try:
+            text = raw.decode("utf-8").strip()
+        except UnicodeDecodeError:
+            await update.message.reply_text("Couldn't read that file as text — please try a plain .txt file.")
+            return CONTENT
+        context.user_data["content_parts"].append(text)
+        await update.message.reply_text(
+            f"Got the file ({len(text)} characters). Send /done to continue, "
+            f"or send more text/files to keep adding."
+        )
+        return CONTENT
+
+    text = update.message.text
+    if text and text.strip() == "/done":
+        full_content = "\n\n".join(context.user_data.get("content_parts", [])).strip()
+        if not full_content:
+            await update.message.reply_text("You haven't sent any content yet — send the text first, then /done.")
+            return CONTENT
+        context.user_data["content"] = full_content
+        keyboard = [[
+            InlineKeyboardButton("Yes, pin it", callback_data="pin_yes"),
+            InlineKeyboardButton("No", callback_data="pin_no"),
+        ]]
+        await update.message.reply_text(
+            f"Content received ({len(full_content)} characters total).\n\nShould this be pinned to the top of the issue?",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+        return PIN
+
+    # Regular text chunk — accumulate and keep waiting for more
+    context.user_data["content_parts"].append(text.strip())
+    total_so_far = sum(len(p) for p in context.user_data["content_parts"])
     await update.message.reply_text(
-        "Should this be pinned to the top of the issue?",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        f"Added ({total_so_far} characters so far). Send more if there's more, "
+        f"or send /done when finished."
     )
-    return PIN
+    return CONTENT
 
 
 async def pin_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -590,7 +633,11 @@ def main():
             TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, title_received)],
             AUTHOR: [MessageHandler(filters.TEXT & ~filters.COMMAND, author_received)],
             EXCERPT: [MessageHandler(filters.TEXT & ~filters.COMMAND, excerpt_received)],
-            CONTENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, content_received)],
+            CONTENT: [
+                MessageHandler(filters.Regex(r'^/done$'), content_received),
+                MessageHandler(filters.Document.ALL, content_received),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, content_received),
+            ],
             PIN: [CallbackQueryHandler(pin_chosen)],
             CONFIRM: [CallbackQueryHandler(confirm_chosen)],
         },
